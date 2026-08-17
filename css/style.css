@@ -50,9 +50,47 @@ body {
   margin-top: 0.4rem;
 }
 
+.btn--secondary {
+  background: #475569;
+}
+
+.btn--secondary:hover {
+  background: #334155;
+}
+
+.btn--save {
+  background: #16a34a;
+}
+
+.btn--save:hover {
+  background: #15803d;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .status {
   font-size: 0.85rem;
   color: #cbd5e1;
+}
+
+.scale-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.scale-control input[type="range"] {
+  width: 90px;
+}
+
+.scale-control span {
+  min-width: 1.6em;
+  font-variant-numeric: tabular-nums;
 }
 
 #map {
@@ -60,9 +98,13 @@ body {
   min-height: 0;
 }
 
-/* Marcador de foto: punto + flecha de azimut opcional */
+/* Marcador de foto: punto + flecha de azimut opcional.
+   No se declara position aquí: Leaflet ya pone position:absolute vía su clase
+   .leaflet-marker-icon (imprescindible para su transform:translate3d). Sobreescribirla
+   con relative rompe el posicionamiento del marcador (efecto "flota hacia la posición
+   correcta al hacer zoom"), porque pasa a colocarse en su posición de flujo normal
+   más el offset de Leaflet, en vez de desde el origen del mapa. */
 .photo-marker {
-  position: relative;
   width: 28px;
   height: 28px;
 }
@@ -78,6 +120,19 @@ body {
   border: 2px solid #fff;
   transform: translate(-50%, -50%);
   box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.photo-marker__dot--editing {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.35);
+}
+
+.photo-marker__dot--dirty {
+  background: #f97316;
+}
+
+.photo-marker__dot--saved-edit {
+  background: #16a34a;
 }
 
 .photo-marker__arrow {
@@ -113,6 +168,17 @@ body {
   opacity: 0.4;
 }
 
+.popup__thumb--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.78rem;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+}
+
 .popup__info {
   margin: 0;
   font-size: 0.78rem;
@@ -129,6 +195,22 @@ body {
 .popup__info dd {
   margin: 0;
   word-break: break-word;
+}
+
+.popup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.popup__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
 }
 
 /* Visor de imagen a tamaño completo */
