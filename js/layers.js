@@ -13,6 +13,8 @@
 
 const BASE_LAYERS = [
   {
+    // Servei de Mapa Base del ICGC (capa "orto"): ortofoto de alta resolución dentro de
+    // Catalunya, completada fuera del territorio con imágenes de OpenMapTiles/OSM para dar contexto.
     id: 'icgc-orto',
     label: 'Ortofoto ICGC',
     url: 'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/orto/MON3857NW/{z}/{x}/{y}.png',

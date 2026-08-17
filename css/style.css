@@ -132,6 +132,10 @@ body {
 }
 
 /* Visor de imagen a tamaño completo */
+.lightbox[hidden] {
+  display: none;
+}
+
 .lightbox {
   position: fixed;
   inset: 0;

@@ -6,7 +6,7 @@ Selecciona una carpeta de tu ordenador, lee los metadatos EXIF de cada foto en e
 
 ## Funcionalidades actuales
 
-- Capa base: Ortofoto del ICGC (WMTS).
+- Capa base: Servei de Mapa Base del ICGC, capa "orto" (WMTS). Dentro de Catalunya muestra la Ortofoto Territorial en alta resolución del ICGC; fuera de Catalunya (resto del mundo) completa el mosaico con imágenes de fondo de OpenMapTiles/OpenStreetMap para dar contexto al hacer zoom out.
 - Selección de una carpeta local (y subcarpetas) de fotos.
 - Lectura de EXIF en el navegador con [exifr](https://github.com/MikeKovarik/exifr): coordenadas GPS, azimut (`GPSImgDirection`), fecha de captura y dispositivo (marca/modelo).
 - Marcador por foto; flecha de orientación cuando hay azimut disponible.
@@ -26,7 +26,7 @@ python -m http.server 8000
 
 Y abre `http://localhost:8000` en el navegador.
 
-> Nota: los tiles de la ortofoto del ICGC se cargan desde internet, así que se necesita conexión aunque las fotos se procesen localmente.
+> Nota: los tiles del mapa base se cargan desde internet, así que se necesita conexión aunque las fotos se procesen localmente. Al alejar el zoom fuera de Catalunya es normal ver el resto del mundo con menor resolución (OpenMapTiles/OSM) y un cambio visible de textura justo en la frontera de Catalunya: es el propio comportamiento del Servei de Mapa Base del ICGC, no un error.
 
 ## Estructura del proyecto
 
