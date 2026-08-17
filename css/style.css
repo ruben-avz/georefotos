@@ -1,0 +1,161 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: #1e293b;
+  color: #fff;
+  flex-wrap: wrap;
+}
+
+.toolbar__title {
+  font-size: 1.1rem;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #1d4ed8;
+}
+
+.btn--small {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+#map {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Marcador de foto: punto + flecha de azimut opcional */
+.photo-marker {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+
+.photo-marker__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.photo-marker__arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 14px solid #2563eb;
+  transform-origin: 50% 100%;
+  opacity: 0.9;
+}
+
+/* Popup de foto */
+.popup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 220px;
+}
+
+.popup__thumb {
+  width: 100%;
+  border-radius: 4px;
+  background: #e2e8f0;
+  min-height: 120px;
+  object-fit: cover;
+}
+
+.popup__thumb--loading {
+  opacity: 0.4;
+}
+
+.popup__info {
+  margin: 0;
+  font-size: 0.78rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.5rem;
+}
+
+.popup__info dt {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.popup__info dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+/* Visor de imagen a tamaño completo */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.lightbox__img {
+  max-width: 92vw;
+  max-height: 92vh;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
+}
+
+.lightbox__close {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
