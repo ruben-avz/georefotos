@@ -15,18 +15,28 @@ L.control.layers(baseLayers, { Fotos: photosLayer }, { collapsed: false }).addTo
 const folderInput = document.getElementById('folder-input');
 const selectFolderBtn = document.getElementById('select-folder-btn');
 const saveChangesBtn = document.getElementById('save-changes-btn');
+const resetDemoBtn = document.getElementById('reset-demo-btn');
 const markerScaleInput = document.getElementById('marker-scale');
 const markerScaleLabel = document.getElementById('marker-scale-label');
 const statusEl = document.getElementById('status');
 const onboardingEl = document.getElementById('onboarding');
 const onboardingSelectBtn = document.getElementById('onboarding-select-btn');
+const onboardingDemoBtn = document.getElementById('onboarding-demo-btn');
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const lightboxClose = document.getElementById('lightbox-close');
 
+const DEMO_MANIFEST_URL = 'demo/manifest.json';
+const DEMO_PHOTOS_BASE = 'demo/photos/';
+
 let currentLightboxUrl = null;
 let photos = [];
-let hasWriteAccess = false; // true solo si la carpeta se abrió con File System Access API
+// canEdit: se puede arrastrar marcador/azimut (modo demo o carpeta real con File System
+// Access API). hasWriteAccess: además existe un directorio real donde persistir esos
+// cambios (falso en demo: las ediciones solo viven en memoria).
+let canEdit = false;
+let hasWriteAccess = false;
+let isDemoMode = false;
 let currentRootName = '';
 let rootDirHandle = null;
 let editadasDirHandle = null; // carpeta "editadas" dentro de la carpeta seleccionada
@@ -90,6 +100,11 @@ function displayAzimuth(photo) {
 function isDirty(photo) {
   return photo.editedLat != null || photo.editedAzimuth != null || photo.editedAzimuthCleared;
 }
+// Etiqueta para un cambio todavía no persistido: en demo nunca hay nada que guardar
+// (es memoria pura), así que el texto no debe sugerir que falta pulsar "Guardar cambios".
+function pendingSuffix() {
+  return isDemoMode ? ' (temporal)' : ' (sin guardar)';
+}
 
 // Las copias corregidas viven en una carpeta "editadas" junto a los originales; se
 // excluye de la lista de fotos para no contarla como una carpeta más de originales.
@@ -101,13 +116,35 @@ function hideOnboarding() {
   onboardingEl.hidden = true;
 }
 
-selectFolderBtn.addEventListener('click', selectFolder);
-onboardingSelectBtn.addEventListener('click', selectFolder);
-folderInput.addEventListener('change', (event) => {
+// Limpia el estado asociado a la sesión anterior (carpeta real o demo) antes de
+// empezar una nueva. Cada punto de entrada activa después lo que le corresponde
+// (hasWriteAccess/canEdit/isDemoMode/currentRootName/...).
+function resetSessionState() {
   hasWriteAccess = false;
+  canEdit = false;
+  isDemoMode = false;
   currentRootName = '';
   rootDirHandle = null;
   editadasDirHandle = null;
+  resetDemoBtn.hidden = true;
+}
+
+// Solo hay algo real que perder (y por tanto solo tiene sentido preguntar) cuando las
+// ediciones pendientes son de una carpeta con acceso de escritura; las de la demo son
+// descartables sin más porque nunca se guardan.
+function confirmDiscardPendingChanges() {
+  if (!hasWriteAccess || !hasPendingChanges()) return true;
+  return confirm('Hay correcciones de ubicación sin guardar que se perderán. ¿Continuar?');
+}
+
+selectFolderBtn.addEventListener('click', selectFolder);
+onboardingSelectBtn.addEventListener('click', selectFolder);
+// El bundle standalone (georefotos.bundle.html) no incluye este botón: no quiere
+// embeber el dataset de demo (~3.4 MB) en el HTML. Sin el botón, el modo demo
+// simplemente no es alcanzable en el bundle; el resto de la app no depende de él.
+if (onboardingDemoBtn) onboardingDemoBtn.addEventListener('click', startDemo);
+folderInput.addEventListener('change', (event) => {
+  resetSessionState();
   const items = Array.from(event.target.files)
     .filter(isImageFile)
     .filter((file) => !isInsideEditedFolder(file.webkitRelativePath || file.name))
@@ -118,6 +155,7 @@ folderInput.addEventListener('change', (event) => {
 });
 
 saveChangesBtn.addEventListener('click', saveAllChanges);
+resetDemoBtn.addEventListener('click', resetDemo);
 
 lightboxClose.addEventListener('click', closeLightbox);
 lightbox.addEventListener('click', (event) => {
@@ -127,8 +165,10 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && !lightbox.hidden) closeLightbox();
 });
 
+// Solo avisa si hay cambios que realmente se perderían al cerrar: los de la demo son
+// memoria pura y se descartan sin aviso a propósito.
 window.addEventListener('beforeunload', (event) => {
-  if (hasPendingChanges()) {
+  if (hasWriteAccess && hasPendingChanges()) {
     event.preventDefault();
     event.returnValue = '';
   }
@@ -151,11 +191,13 @@ async function selectFolder() {
     } catch (err) {
       return; // el usuario ha cancelado el selector
     }
-    if (hasPendingChanges() && !confirm('Hay correcciones de ubicación sin guardar que se perderán. ¿Continuar?')) {
+    if (!confirmDiscardPendingChanges()) {
       return;
     }
     hideOnboarding();
+    resetSessionState();
     hasWriteAccess = true;
+    canEdit = true;
     currentRootName = dirHandle.name;
     rootDirHandle = dirHandle;
     try {
@@ -176,11 +218,61 @@ async function selectFolder() {
       statusEl.textContent = 'No se ha podido leer la carpeta seleccionada.';
     }
   } else {
-    if (hasPendingChanges() && !confirm('Hay correcciones de ubicación sin guardar que se perderán. ¿Continuar?')) {
+    if (!confirmDiscardPendingChanges()) {
       return;
     }
     folderInput.click();
   }
+}
+
+async function startDemo() {
+  if (!confirmDiscardPendingChanges()) return;
+  hideOnboarding();
+  resetSessionState();
+  canEdit = true;
+  isDemoMode = true;
+  statusEl.textContent = 'Cargando fotos de demo...';
+  try {
+    const manifestResponse = await fetch(DEMO_MANIFEST_URL);
+    if (!manifestResponse.ok) throw new Error(`No se ha podido leer ${DEMO_MANIFEST_URL}`);
+    const manifest = await manifestResponse.json();
+    const items = [];
+    for (const entry of manifest.photos) {
+      const res = await fetch(DEMO_PHOTOS_BASE + entry.file);
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      const file = new File([blob], entry.file, { type: blob.type || 'image/jpeg' });
+      items.push({ file, handle: null, dirHandle: null, relativePath: entry.file });
+    }
+    await handleFileList(items);
+    resetDemoBtn.hidden = false;
+  } catch (err) {
+    console.error(err);
+    isDemoMode = false;
+    statusEl.textContent = 'No se han podido cargar las fotos de demo.';
+  }
+}
+
+// Descarta todas las ediciones en memoria y deja cada foto con los valores que traía
+// su JPEG de demo (no hay copia guardada que restaurar: en demo nunca se escribe).
+function resetDemo() {
+  photos.forEach((photo) => {
+    if (photo.editingLocation) {
+      photo.editingLocation = false;
+      photo.marker.dragging.disable();
+    }
+    if (photo.editingAzimuth) stopEditAzimuth(photo);
+    photo.editedLat = null;
+    photo.editedLon = null;
+    photo.editedAzimuth = null;
+    photo.editedAzimuthCleared = false;
+    photo.marker.setLatLng([photo.lat, photo.lon]);
+    photo.marker.setIcon(buildMarkerIcon(photo));
+    if (photo.marker.getPopup() && photo.marker.getPopup().isOpen()) {
+      photo.marker.getPopup().update();
+    }
+  });
+  statusEl.textContent = `${photos.length} fotos de demo · valores originales restablecidos`;
 }
 
 async function collectImageEntries(dirHandle, relativePath = '') {
@@ -227,11 +319,14 @@ async function handleFileList(items) {
     bounds.push([effectiveLat(photo), effectiveLon(photo)]);
   }
 
-  const writeNote = hasWriteAccess
-    ? ''
-    : window.showDirectoryPicker
+  let writeNote = '';
+  if (isDemoMode) {
+    writeNote = ' · modo demo: los cambios no se guardan';
+  } else if (!hasWriteAccess) {
+    writeNote = window.showDirectoryPicker
       ? ' · corrección de ubicación no disponible en este navegador'
       : ' · corrección de ubicación no disponible (usa Chrome o Edge; Brave y Firefox la bloquean)';
+  }
   statusEl.textContent = `${located} fotos ubicadas · ${skipped} sin datos GPS${writeNote}`;
 
   if (bounds.length > 0) {
@@ -366,7 +461,7 @@ function buildPopupContent(photo) {
   const locationDirty = photo.editedLat != null;
   const shownLat = locationDirty ? photo.editedLat : photo.lat;
   const shownLon = locationDirty ? photo.editedLon : photo.lon;
-  const locSuffix = locationDirty ? ' (sin guardar)' : photo.hasSavedEdit && photo.lat !== photo.originalLat ? ' (corregida)' : '';
+  const locSuffix = locationDirty ? pendingSuffix() : photo.hasSavedEdit && photo.lat !== photo.originalLat ? ' (corregida)' : '';
   addInfoRow(info, 'Coordenadas', `${shownLat.toFixed(6)}, ${shownLon.toFixed(6)}${locSuffix}`);
   if (locationDirty || photo.lat !== photo.originalLat || photo.lon !== photo.originalLon) {
     addInfoRow(info, 'Coordenadas originales', `${photo.originalLat.toFixed(6)}, ${photo.originalLon.toFixed(6)}`);
@@ -378,10 +473,10 @@ function buildPopupContent(photo) {
   const azDirty = photo.editedAzimuth != null || photo.editedAzimuthCleared;
   const azChanged = photo.azimuth !== photo.originalAzimuth;
   if (shownAzimuth != null) {
-    const azSuffix = azDirty ? ' (sin guardar)' : azChanged ? ' (corregido)' : '';
+    const azSuffix = azDirty ? pendingSuffix() : azChanged ? ' (corregido)' : '';
     addInfoRow(info, 'Azimut', `${Math.round(shownAzimuth)}°${azSuffix}`);
   } else if (azDirty || azChanged) {
-    addInfoRow(info, 'Azimut', `Sin azimut${azDirty ? ' (sin guardar)' : ' (eliminado)'}`);
+    addInfoRow(info, 'Azimut', `Sin azimut${azDirty ? pendingSuffix() : ' (eliminado)'}`);
   }
   if (azDirty || azChanged) {
     addInfoRow(info, 'Azimut original', photo.originalAzimuth != null ? `${Math.round(photo.originalAzimuth)}°` : 'Sin azimut');
@@ -398,7 +493,7 @@ function buildPopupContent(photo) {
   expandBtn.addEventListener('click', () => openLightbox(photo));
   actions.appendChild(expandBtn);
 
-  if (hasWriteAccess) {
+  if (canEdit) {
     const locationBtn = document.createElement('button');
     locationBtn.className = 'btn btn--small btn--secondary';
     locationBtn.type = 'button';
@@ -576,7 +671,9 @@ function onMarkerDragEnd(photo) {
   }
   saveDirtyCache();
   updateSaveButton();
-  statusEl.textContent = 'Ubicación corregida (sin guardar). Pulsa "Guardar cambios" para escribirla en el archivo.';
+  statusEl.textContent = isDemoMode
+    ? 'Ubicación modificada temporalmente en la demo.'
+    : 'Ubicación corregida (sin guardar). Pulsa "Guardar cambios" para escribirla en el archivo.';
 }
 
 function undoLocationEdit(photo) {
@@ -687,7 +784,9 @@ function onAzimuthHandleDragEnd(photo) {
   }
   saveDirtyCache();
   updateSaveButton();
-  statusEl.textContent = 'Azimut corregido (sin guardar). Pulsa "Guardar cambios" para escribirlo en el archivo.';
+  statusEl.textContent = isDemoMode
+    ? 'Azimut modificado temporalmente en la demo.'
+    : 'Azimut corregido (sin guardar). Pulsa "Guardar cambios" para escribirlo en el archivo.';
 }
 
 function stopEditAzimuth(photo) {
@@ -735,7 +834,7 @@ function hasPendingChanges() {
 
 function updateSaveButton() {
   const dirtyCount = photos.filter(isDirty).length;
-  if (dirtyCount > 0) {
+  if (dirtyCount > 0 && hasWriteAccess) {
     saveChangesBtn.hidden = false;
     saveChangesBtn.textContent = `Guardar cambios (${dirtyCount})`;
   } else {

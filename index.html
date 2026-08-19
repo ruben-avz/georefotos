@@ -13,6 +13,7 @@
   <button id="select-folder-btn" class="btn" type="button">Seleccionar carpeta&hellip;</button>
   <input id="folder-input" type="file" webkitdirectory directory multiple accept="image/*" hidden />
   <button id="save-changes-btn" class="btn btn--save" type="button" hidden>Guardar cambios</button>
+  <button id="reset-demo-btn" class="btn btn--secondary" type="button" hidden>Restablecer demo</button>
   <label class="scale-control">
     Tamaño de los puntos
     <input id="marker-scale" type="range" min="0" max="2" step="1" value="0" list="marker-scale-ticks" />
@@ -31,7 +32,10 @@
     <div class="onboarding__card">
       <h2 class="onboarding__title">GeoRefotos</h2>
       <p class="onboarding__subtitle">Revisa y corrige fotografías georreferenciadas directamente sobre el mapa.</p>
-      <button id="onboarding-select-btn" class="btn btn--large" type="button">Seleccionar carpeta de fotos</button>
+      <div class="onboarding__actions">
+        <button id="onboarding-select-btn" class="btn btn--large" type="button">Seleccionar carpeta de fotos</button>
+        <button id="onboarding-demo-btn" class="btn btn--large btn--secondary" type="button">Probar demo</button>
+      </div>
       <ul class="onboarding__features">
         <li>Corrige ubicación y orientación</li>
         <li>Las fotografías se procesan localmente y no se suben a ningún servidor</li>

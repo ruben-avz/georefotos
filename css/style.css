@@ -140,7 +140,15 @@ body {
 .btn--large {
   padding: 0.65rem 1.2rem;
   font-size: 0.95rem;
-  width: 100%;
+}
+
+.onboarding__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.onboarding__actions .btn {
+  flex: 1;
 }
 
 .onboarding__features {

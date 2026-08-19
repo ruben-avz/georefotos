@@ -5,6 +5,11 @@ Los CDN externos (Leaflet, exifr, heic2any, piexifjs) se dejan como <link>/<scri
 la app ya necesita internet para los tiles del mapa, así que embeberlos no aporta nada y
 solo infla mucho el archivo. Solo se incrustan los ficheros propios del proyecto (css/js).
 
+El botón "Probar demo" del card inicial se quita en el bundle: la demo depende de
+demo/photos/ y demo/manifest.json (~3.4 MB) servidos aparte, que el bundle standalone
+no lleva consigo. La web normal (index.html en GitHub Pages) mantiene el botón intacto;
+app.js ya tolera su ausencia (comprueba que el elemento exista antes de usarlo).
+
 Uso:
     python tools/build_single_file.py [ruta_salida.html]
 
@@ -20,6 +25,16 @@ INDEX_HTML = PROJECT_ROOT / "index.html"
 
 LINK_RE = re.compile(r'<link\s+rel="stylesheet"\s+href="([^"]+)"\s*/?>')
 SCRIPT_RE = re.compile(r'<script\s+src="([^"]+)"\s*></script>')
+DEMO_BUTTON_RE = re.compile(r'\s*<button id="onboarding-demo-btn"[^>]*>.*?</button>\n?')
+
+
+def strip_demo_button(html):
+    new_html, count = DEMO_BUTTON_RE.subn('', html)
+    if count != 1:
+        raise RuntimeError(
+            f"Se esperaba encontrar exactamente 1 botón #onboarding-demo-btn en index.html, se encontraron {count}."
+        )
+    return new_html
 
 
 def is_local(url):
@@ -50,6 +65,7 @@ def inline_scripts(html):
 
 def build(output_path):
     html = INDEX_HTML.read_text(encoding="utf-8")
+    html = strip_demo_button(html)
     html = inline_stylesheets(html)
     html = inline_scripts(html)
     output_path.write_text(html, encoding="utf-8")
