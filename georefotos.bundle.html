@@ -1,3 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoRefotos</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: #1e293b;
+  color: #fff;
+  flex-wrap: wrap;
+}
+
+.toolbar__title {
+  font-size: 1.1rem;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #1d4ed8;
+}
+
+.btn--small {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.btn--secondary {
+  background: #475569;
+}
+
+.btn--secondary:hover {
+  background: #334155;
+}
+
+.btn--save {
+  background: #16a34a;
+}
+
+.btn--save:hover {
+  background: #15803d;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.scale-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.scale-control input[type="range"] {
+  width: 90px;
+}
+
+.scale-control span {
+  min-width: 1.6em;
+  font-variant-numeric: tabular-nums;
+}
+
+#map {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Marcador de foto: punto + flecha de azimut opcional.
+   No se declara position aquí: Leaflet ya pone position:absolute vía su clase
+   .leaflet-marker-icon (imprescindible para su transform:translate3d). Sobreescribirla
+   con relative rompe el posicionamiento del marcador (efecto "flota hacia la posición
+   correcta al hacer zoom"), porque pasa a colocarse en su posición de flujo normal
+   más el offset de Leaflet, en vez de desde el origen del mapa. */
+.photo-marker {
+  width: 28px;
+  height: 28px;
+}
+
+.photo-marker__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.photo-marker__dot--editing {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.35);
+}
+
+.photo-marker__dot--dirty {
+  background: #f97316;
+}
+
+.photo-marker__dot--saved-edit {
+  background: #16a34a;
+}
+
+.photo-marker__arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 14px solid #2563eb;
+  transform-origin: 50% 100%;
+  /* Contorno blanco para que se vea sobre cualquier fondo de la ortofoto */
+  filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff);
+}
+
+/* Halo y manejador para editar el azimut arrastrando alrededor del punto */
+.azimuth-halo {
+  border-radius: 50%;
+  border: 2px dashed rgba(245, 158, 11, 0.85);
+  background: rgba(245, 158, 11, 0.08);
+  pointer-events: none;
+}
+
+.azimuth-handle {
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  cursor: grab;
+}
+
+.azimuth-handle:active {
+  cursor: grabbing;
+}
+
+/* Popup de foto */
+.popup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 220px;
+}
+
+.popup__thumb {
+  width: 100%;
+  border-radius: 4px;
+  background: #e2e8f0;
+  min-height: 120px;
+  object-fit: cover;
+}
+
+.popup__thumb--loading {
+  opacity: 0.4;
+}
+
+.popup__thumb--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.78rem;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+}
+
+.popup__info {
+  margin: 0;
+  font-size: 0.78rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.5rem;
+}
+
+.popup__info dt {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.popup__info dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.popup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.popup__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+}
+
+/* Visor de imagen a tamaño completo */
+.lightbox[hidden] {
+  display: none;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.lightbox__img {
+  max-width: 92vw;
+  max-height: 92vh;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
+}
+
+.lightbox__close {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+</style>
+</head>
+<body>
+<header class="toolbar">
+  <h1 class="toolbar__title">GeoRefotos</h1>
+  <button id="select-folder-btn" class="btn" type="button">Seleccionar carpeta&hellip;</button>
+  <input id="folder-input" type="file" webkitdirectory directory multiple accept="image/*" hidden />
+  <button id="save-changes-btn" class="btn btn--save" type="button" hidden>Guardar cambios</button>
+  <label class="scale-control">
+    Tamaño de los puntos
+    <input id="marker-scale" type="range" min="0" max="2" step="1" value="0" list="marker-scale-ticks" />
+    <datalist id="marker-scale-ticks">
+      <option value="0"></option>
+      <option value="1"></option>
+      <option value="2"></option>
+    </datalist>
+    <span id="marker-scale-label">x1</span>
+  </label>
+  <span id="status" class="status">Selecciona una carpeta con fotos para empezar.</span>
+</header>
+
+<main id="map"></main>
+
+<div id="lightbox" class="lightbox" hidden>
+  <button id="lightbox-close" class="lightbox__close" aria-label="Cerrar" type="button">&times;</button>
+  <img id="lightbox-img" class="lightbox__img" alt="Foto a tamaño completo" />
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
+<script>
+// Configuración de capas base del mapa.
+// Para añadir una nueva capa (mapa topogràfic ICGC, OSM, Cadastre...) basta con
+// añadir un nuevo objeto a BASE_LAYERS siguiendo el mismo esquema, y buildBaseLayers()
+// lo incorporará automáticamente al selector de capas de Leaflet.
+//
+// Ejemplo de capa futura (OpenStreetMap):
+// {
+//   id: 'osm',
+//   label: 'OpenStreetMap',
+//   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+//   options: { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }
+// }
+
+const BASE_LAYERS = [
+  {
+    // Servei de Mapa Base del ICGC (capa "orto"): ortofoto de alta resolución dentro de
+    // Catalunya, completada fuera del territorio con imágenes de OpenMapTiles/OSM para dar contexto.
+    id: 'icgc-orto',
+    label: 'Ortofoto ICGC',
+    url: 'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/orto/MON3857NW/{z}/{x}/{y}.png',
+    options: {
+      maxZoom: 20,
+      minZoom: 5,
+      attribution:
+        '&copy; <a href="https://www.icgc.cat/" target="_blank" rel="noopener">Institut Cartogràfic i Geològic de Catalunya</a>'
+    }
+  }
+];
+
+// Capas superpuestas (overlays) que se pueden combinar con la capa base.
+// De momento solo contiene el grupo de marcadores de fotos, que se añade en app.js.
+const OVERLAY_LAYERS = [];
+
+function buildBaseLayers() {
+  const layers = {};
+  BASE_LAYERS.forEach((cfg) => {
+    layers[cfg.label] = L.tileLayer(cfg.url, cfg.options);
+  });
+  return layers;
+}
+
+</script>
+<script>
+// GeoRefotos: escritura de la corrección de ubicación y/o azimut en una copia editada.
+//
+// Los originales nunca se modifican. Cada corrección se guarda como una copia en la
+// carpeta "editadas" (dentro de la carpeta seleccionada): JPEG con el bloque GPS del EXIF
+// reescrito (se conserva el resto de metadatos), o HEIC/HEIF convertido a JPEG con un EXIF
+// nuevo (fecha, dispositivo, GPS, azimut), ya que los navegadores no saben escribir EXIF
+// dentro de un contenedor HEIC. Ediciones sucesivas de la misma foto sobreescriben la misma
+// copia editada (el nombre de archivo destino es siempre el mismo, derivado de la ruta del
+// original).
+
+const EDITED_FOLDER_NAME = 'editadas';
+
+function editedFileName(relativePath) {
+  const flat = relativePath.replace(/\//g, '__');
+  const ext = getExtensionFromName(flat);
+  if (ext === 'heic' || ext === 'heif') {
+    return `${flat.slice(0, -(ext.length + 1))}.jpg`;
+  }
+  return flat;
+}
+
+function decimalToDmsRational(value) {
+  const abs = Math.abs(value);
+  const degrees = Math.floor(abs);
+  const minutesFloat = (abs - degrees) * 60;
+  const minutes = Math.floor(minutesFloat);
+  const seconds = Math.round((minutesFloat - minutes) * 60 * 100);
+  return [[degrees, 1], [minutes, 1], [seconds, 100]];
+}
+
+function buildGpsIfd(lat, lon, azimuth) {
+  const gps = {
+    [piexif.GPSIFD.GPSVersionID]: [2, 3, 0, 0],
+    [piexif.GPSIFD.GPSLatitudeRef]: lat >= 0 ? 'N' : 'S',
+    [piexif.GPSIFD.GPSLatitude]: decimalToDmsRational(lat),
+    [piexif.GPSIFD.GPSLongitudeRef]: lon >= 0 ? 'E' : 'W',
+    [piexif.GPSIFD.GPSLongitude]: decimalToDmsRational(lon)
+  };
+  if (azimuth != null) {
+    gps[piexif.GPSIFD.GPSImgDirectionRef] = 'T';
+    gps[piexif.GPSIFD.GPSImgDirection] = [Math.round(azimuth * 100), 100];
+  }
+  return gps;
+}
+
+function formatExifDate(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}:${pad(date.getMonth() + 1)}:${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function dataURLToBlob(dataUrl) {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/data:(.*?);base64/)[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function buildJpegExportBlob(photo) {
+  const dataUrl = await blobToDataURL(photo.file);
+  let exifObj;
+  try {
+    exifObj = piexif.load(dataUrl);
+  } catch (err) {
+    exifObj = { '0th': {}, Exif: {}, GPS: {}, '1st': {}, thumbnail: null };
+  }
+  exifObj.GPS = buildGpsIfd(effectiveLat(photo), effectiveLon(photo), effectiveAzimuth(photo));
+  const exifBytes = piexif.dump(exifObj);
+  const newDataUrl = piexif.insert(exifBytes, dataUrl);
+  return dataURLToBlob(newDataUrl);
+}
+
+async function buildHeicExportBlob(photo) {
+  const jpegBlob = await getDisplayableBlob(photo);
+  const dataUrl = await blobToDataURL(jpegBlob);
+
+  const exifObj = { '0th': {}, Exif: {}, GPS: {}, '1st': {}, thumbnail: null };
+  if (photo.make) exifObj['0th'][piexif.ImageIFD.Make] = photo.make;
+  if (photo.model) exifObj['0th'][piexif.ImageIFD.Model] = photo.model;
+  if (photo.date) exifObj.Exif[piexif.ExifIFD.DateTimeOriginal] = formatExifDate(photo.date);
+  exifObj.GPS = buildGpsIfd(effectiveLat(photo), effectiveLon(photo), effectiveAzimuth(photo));
+
+  const exifBytes = piexif.dump(exifObj);
+  const newDataUrl = piexif.insert(exifBytes, dataUrl);
+  return dataURLToBlob(newDataUrl);
+}
+
+async function savePhotoLocation(photo, editadasDirHandle) {
+  const ext = getExtension(photo.file);
+  let blob;
+  if (ext === 'heic' || ext === 'heif') {
+    blob = await buildHeicExportBlob(photo);
+  } else if (ext === 'jpg' || ext === 'jpeg') {
+    blob = await buildJpegExportBlob(photo);
+  } else {
+    throw new Error(`Formato .${ext} no soportado para guardar la corrección`);
+  }
+
+  const targetName = editedFileName(photo.relativePath);
+  const fileHandle = await editadasDirHandle.getFileHandle(targetName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+  photo.hasSavedEdit = true;
+}
+
+</script>
+<script>
 // GeoRefotos: visor de fotos georreferenciadas sobre la ortofoto del ICGC.
 
 const CATALONIA_CENTER = [41.82, 1.86];
@@ -825,3 +1296,7 @@ async function saveAllChanges() {
       ? `Guardado en /editadas: ${done} foto(s) ok, ${failed} con error (revisa la consola del navegador).`
       : `Guardado en /editadas: ${done} foto(s).`;
 }
+
+</script>
+</body>
+</html>

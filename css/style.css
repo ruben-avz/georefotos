@@ -145,7 +145,28 @@ body {
   border-right: 6px solid transparent;
   border-bottom: 14px solid #2563eb;
   transform-origin: 50% 100%;
-  opacity: 0.9;
+  /* Contorno blanco para que se vea sobre cualquier fondo de la ortofoto */
+  filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff);
+}
+
+/* Halo y manejador para editar el azimut arrastrando alrededor del punto */
+.azimuth-halo {
+  border-radius: 50%;
+  border: 2px dashed rgba(245, 158, 11, 0.85);
+  background: rgba(245, 158, 11, 0.08);
+  pointer-events: none;
+}
+
+.azimuth-handle {
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  cursor: grab;
+}
+
+.azimuth-handle:active {
+  cursor: grabbing;
 }
 
 /* Popup de foto */

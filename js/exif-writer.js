@@ -1,4 +1,4 @@
-// GeoRefotos: escritura de la corrección de ubicación en una copia editada.
+// GeoRefotos: escritura de la corrección de ubicación y/o azimut en una copia editada.
 //
 // Los originales nunca se modifican. Cada corrección se guarda como una copia en la
 // carpeta "editadas" (dentro de la carpeta seleccionada): JPEG con el bloque GPS del EXIF
@@ -74,7 +74,7 @@ async function buildJpegExportBlob(photo) {
   } catch (err) {
     exifObj = { '0th': {}, Exif: {}, GPS: {}, '1st': {}, thumbnail: null };
   }
-  exifObj.GPS = buildGpsIfd(photo.editedLat, photo.editedLon, photo.azimuth);
+  exifObj.GPS = buildGpsIfd(effectiveLat(photo), effectiveLon(photo), effectiveAzimuth(photo));
   const exifBytes = piexif.dump(exifObj);
   const newDataUrl = piexif.insert(exifBytes, dataUrl);
   return dataURLToBlob(newDataUrl);
@@ -88,7 +88,7 @@ async function buildHeicExportBlob(photo) {
   if (photo.make) exifObj['0th'][piexif.ImageIFD.Make] = photo.make;
   if (photo.model) exifObj['0th'][piexif.ImageIFD.Model] = photo.model;
   if (photo.date) exifObj.Exif[piexif.ExifIFD.DateTimeOriginal] = formatExifDate(photo.date);
-  exifObj.GPS = buildGpsIfd(photo.editedLat, photo.editedLon, photo.azimuth);
+  exifObj.GPS = buildGpsIfd(effectiveLat(photo), effectiveLon(photo), effectiveAzimuth(photo));
 
   const exifBytes = piexif.dump(exifObj);
   const newDataUrl = piexif.insert(exifBytes, dataUrl);

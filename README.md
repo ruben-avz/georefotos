@@ -12,13 +12,17 @@ Selecciona una carpeta de tu ordenador, lee los metadatos EXIF de cada foto en e
 - Marcador por foto; flecha de orientación cuando hay azimut disponible.
 - Al hacer clic en un marcador se abre una miniatura con: nombre de archivo, coordenadas, fecha y dispositivo. Las fotos HEIC/HEIF se convierten a JPEG al vuelo en el navegador (con [heic2any](https://github.com/alexcorvi/heic2any)) para poder mostrarlas, ya que ningún navegador basado en Chromium las decodifica de forma nativa.
 - Botón "Ver imagen completa" que abre la foto original a tamaño completo.
-- **Corrección de ubicación, sin tocar los originales**: botón "Corregir ubicación" en el popup que permite arrastrar el marcador a la posición correcta. Los cambios quedan marcados como pendientes (marcador naranja) y en caché local hasta guardarlos.
-- Botón global "Guardar cambios" (solo visible si hay correcciones pendientes) que escribe la nueva ubicación en una **copia** dentro de una carpeta `editadas/` creada junto a las fotos originales — el archivo original nunca se modifica ni se borra:
-  - **JPEG**: la copia lleva el mismo EXIF que el original con el bloque GPS reescrito (fecha, dispositivo, etc. se conservan).
-  - **HEIC/HEIF**: como los navegadores no saben escribir EXIF en HEIC, la copia se genera como `.jpg` con un EXIF nuevo (fecha, dispositivo, GPS corregido, azimut).
+- **Edición de ubicación y de azimut, sin tocar los originales**:
+  - Botón "Editar ubicación" en el popup: arrastra el marcador a la posición correcta.
+  - Botón "Editar azimut": aparece un halo discontinuo alrededor del punto con un manejador naranja; arrástralo en círculo para fijar la orientación (la flecha del marcador gira en vivo mientras arrastras). Si la foto no tenía azimut, el manejador arranca apuntando al norte.
+  - Ambos cambios quedan marcados como pendientes (marcador naranja) y en caché local hasta guardarlos; cada uno tiene su propio botón "Deshacer ubicación" / "Deshacer azimut" (cancela solo el arrastre en curso, vuelve al último valor guardado).
+  - Además, siempre que la ubicación o el azimut vigentes difieran del original de la cámara (haya o no una edición ya guardada de por medio) aparece "Revertir ubicación/azimut a la original", que encola la vuelta al valor de origen — incluida la foto sin azimut, si es que nunca lo tuvo.
+- Botón global "Guardar cambios" (solo visible si hay ediciones pendientes) que escribe la ubicación y/o el azimut vigentes en una **copia** dentro de una carpeta `editadas/` creada junto a las fotos originales — el archivo original nunca se modifica ni se borra:
+  - **JPEG**: la copia lleva el mismo EXIF que el original con los bloques GPS/azimut reescritos (fecha, dispositivo, etc. se conservan).
+  - **HEIC/HEIF**: como los navegadores no saben escribir EXIF en HEIC, la copia se genera como `.jpg` con un EXIF nuevo (fecha, dispositivo, GPS y azimut corregidos).
   - Otros formatos (PNG, WebP...) no se pueden guardar todavía; se avisa en el estado si falla.
-  - Si una foto ya tiene su copia corregida en `editadas/`, al reabrir la carpeta se detecta automáticamente y el marcador se muestra en la ubicación guardada (verde = corregida y guardada; naranja = corrección pendiente). Volver a corregirla **sobreescribe la misma copia**, no crea una nueva.
-- Aviso del navegador al intentar cerrar la pestaña si hay correcciones sin guardar.
+  - Si una foto ya tiene su copia corregida en `editadas/`, al reabrir la carpeta se detecta automáticamente y el marcador se muestra con la ubicación/azimut guardados (verde = corregida y guardada; naranja = edición pendiente). Volver a editarla **sobreescribe la misma copia**, no crea una nueva.
+- Aviso del navegador al intentar cerrar la pestaña si hay ediciones sin guardar.
 - Control deslizante en la barra superior para ajustar el tamaño de los puntos (x1 / x2 / x4), útil cuando hay muchas fotos juntas o pantallas de alta resolución.
 - Arquitectura de capas preparada para añadir o combinar más capas base/superpuestas más adelante (ver `js/layers.js`).
 
@@ -26,8 +30,8 @@ Selecciona una carpeta de tu ordenador, lee los metadatos EXIF de cada foto en e
 
 No requiere instalación ni build. Solo abre [index.html](index.html) con doble clic y pulsa "Seleccionar carpeta...".
 
-- En **Chrome o Edge**, la carpeta se abre con la File System Access API: permite guardar las correcciones de ubicación directamente en los archivos.
-- En otros navegadores (**Brave, Firefox, Safari**) se usa el selector de carpeta clásico: la visualización funciona igual, pero **no se puede guardar** ninguna corrección (el botón "Corregir ubicación" no aparece). Brave bloquea la File System Access API a propósito (sin opción para reactivarla desde Shields ni `brave://flags`, a fecha de hoy), así que aunque es un navegador basado en Chromium se comporta como Firefox en este punto.
+- En **Chrome o Edge**, la carpeta se abre con la File System Access API: permite guardar las ediciones de ubicación/azimut directamente en los archivos.
+- En otros navegadores (**Brave, Firefox, Safari**) se usa el selector de carpeta clásico: la visualización funciona igual, pero **no se puede guardar** ninguna edición (los botones "Editar ubicación"/"Editar azimut" no aparecen). Brave bloquea la File System Access API a propósito (sin opción para reactivarla desde Shields ni `brave://flags`, a fecha de hoy), así que aunque es un navegador basado en Chromium se comporta como Firefox en este punto.
 
 Si el navegador restringe la carga de imágenes locales al abrir el archivo directamente (`file://`), sirve la carpeta con un servidor local, por ejemplo con Python (ya viene instalado con el sistema en muchos casos):
 
@@ -37,6 +41,18 @@ python -m http.server 8000
 
 Y abre `http://localhost:8000` en el navegador.
 
+### Empaquetar en un solo archivo HTML
+
+Para compartir la app como un único fichero (por ejemplo, por email o USB), genera una versión con el CSS y el JS propios incrustados:
+
+```bash
+python tools/build_single_file.py
+```
+
+Esto crea (o actualiza) [georefotos.bundle.html](georefotos.bundle.html) en la raíz del proyecto, que se abre igual que `index.html` (doble clic). Los CDN externos (Leaflet, exifr, heic2any, piexifjs) se dejan como enlaces remotos — la app ya necesita internet para los tiles del mapa, así que embeberlos solo aumentaría el tamaño sin aportar nada.
+
+Este archivo generado sí está versionado en el repositorio para poder descargarlo directamente sin clonar el proyecto ni tener Python instalado. **Si tocas `index.html`, `css/style.css` o cualquier fichero de `js/`, vuelve a ejecutar el script antes de commitear** para que el bundle no quede desactualizado.
+
 > Nota: los tiles del mapa base se cargan desde internet, así que se necesita conexión aunque las fotos se procesen localmente. Al alejar el zoom fuera de Catalunya es normal ver el resto del mundo con menor resolución (OpenMapTiles/OSM) y un cambio visible de textura justo en la frontera de Catalunya: es el propio comportamiento del Servei de Mapa Base del ICGC, no un error.
 
 ## Estructura del proyecto
@@ -45,10 +61,12 @@ Y abre `http://localhost:8000` en el navegador.
 georefotos/
 ├── index.html          # Punto de entrada
 ├── css/style.css        # Estilos (toolbar, marcadores, popup, visor)
-└── js/
-    ├── layers.js         # Configuración de capas del mapa (base layers)
-    ├── exif-writer.js     # Genera la copia corregida en /editadas (GPS en EXIF, HEIC→JPEG)
-    └── app.js              # Selección de carpeta, EXIF, marcadores, popup, edición, guardado
+├── js/
+│   ├── layers.js         # Configuración de capas del mapa (base layers)
+│   ├── exif-writer.js     # Genera la copia corregida en /editadas (GPS/azimut en EXIF, HEIC→JPEG)
+│   └── app.js              # Selección de carpeta, EXIF, marcadores, popup, edición, guardado
+└── tools/
+    └── build_single_file.py # Empaqueta index.html + css/js en un único HTML (ver más abajo)
 ```
 
 ## Añadir nuevas capas
@@ -60,10 +78,9 @@ Las capas base se definen en [js/layers.js](js/layers.js) como una lista de obje
 - Capa del Mapa Topogràfic de l'ICGC.
 - Capa OpenStreetMap.
 - Capa del Cadastre (superpuesta, combinable con la ortofoto).
-- Corrección manual del azimut (rotando la flecha) con el mismo mecanismo de guardado.
 - Guardado de correcciones para formatos no-JPEG que no sean HEIC (PNG, WebP...).
 
 ## Compatibilidad
 
 - **Visualización**: cualquier navegador reciente con soporte para selección de carpetas (Chrome, Edge, Brave, Firefox). Safari tiene soporte limitado.
-- **Corrección y guardado de ubicación**: requiere un navegador con [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API). Funciona en **Chrome y Edge**. **No funciona en Brave** (lo bloquea deliberadamente, ver [issue #44411](https://github.com/brave/brave-browser/issues/44411)), ni en Firefox ni Safari (todavía no la implementan).
+- **Edición y guardado de ubicación/azimut**: requiere un navegador con [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API). Funciona en **Chrome y Edge**. **No funciona en Brave** (lo bloquea deliberadamente, ver [issue #44411](https://github.com/brave/brave-browser/issues/44411)), ni en Firefox ni Safari (todavía no la implementan).
