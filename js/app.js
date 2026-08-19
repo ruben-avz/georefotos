@@ -18,6 +18,8 @@ const saveChangesBtn = document.getElementById('save-changes-btn');
 const markerScaleInput = document.getElementById('marker-scale');
 const markerScaleLabel = document.getElementById('marker-scale-label');
 const statusEl = document.getElementById('status');
+const onboardingEl = document.getElementById('onboarding');
+const onboardingSelectBtn = document.getElementById('onboarding-select-btn');
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const lightboxClose = document.getElementById('lightbox-close');
@@ -95,7 +97,12 @@ function isInsideEditedFolder(relativePath) {
   return relativePath.split('/').slice(0, -1).includes(EDITED_FOLDER_NAME);
 }
 
+function hideOnboarding() {
+  onboardingEl.hidden = true;
+}
+
 selectFolderBtn.addEventListener('click', selectFolder);
+onboardingSelectBtn.addEventListener('click', selectFolder);
 folderInput.addEventListener('change', (event) => {
   hasWriteAccess = false;
   currentRootName = '';
@@ -105,6 +112,7 @@ folderInput.addEventListener('change', (event) => {
     .filter(isImageFile)
     .filter((file) => !isInsideEditedFolder(file.webkitRelativePath || file.name))
     .map((file) => ({ file, handle: null, dirHandle: null, relativePath: file.webkitRelativePath || file.name }));
+  if (items.length > 0) hideOnboarding();
   handleFileList(items);
   folderInput.value = '';
 });
@@ -146,6 +154,7 @@ async function selectFolder() {
     if (hasPendingChanges() && !confirm('Hay correcciones de ubicación sin guardar que se perderán. ¿Continuar?')) {
       return;
     }
+    hideOnboarding();
     hasWriteAccess = true;
     currentRootName = dirHandle.name;
     rootDirHandle = dirHandle;

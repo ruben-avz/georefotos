@@ -26,7 +26,21 @@
   <span id="status" class="status">Selecciona una carpeta con fotos para empezar.</span>
 </header>
 
-<main id="map"></main>
+<main id="map">
+  <div id="onboarding" class="onboarding">
+    <div class="onboarding__card">
+      <h2 class="onboarding__title">GeoRefotos</h2>
+      <p class="onboarding__subtitle">Revisa y corrige fotografías georreferenciadas directamente sobre el mapa.</p>
+      <button id="onboarding-select-btn" class="btn btn--large" type="button">Seleccionar carpeta de fotos</button>
+      <ul class="onboarding__features">
+        <li>Corrige ubicación y orientación</li>
+        <li>Las fotografías se procesan localmente y no se suben a ningún servidor</li>
+        <li>Los originales nunca se modifican</li>
+      </ul>
+      <p class="onboarding__note">Chrome / Edge recomendados</p>
+    </div>
+  </div>
+</main>
 
 <div id="lightbox" class="lightbox" hidden>
   <button id="lightbox-close" class="lightbox__close" aria-label="Cerrar" type="button">&times;</button>

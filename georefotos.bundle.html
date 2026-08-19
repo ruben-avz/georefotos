@@ -106,6 +106,81 @@ body {
   min-height: 0;
 }
 
+.onboarding {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+  pointer-events: none;
+  padding: 1rem;
+}
+
+.onboarding[hidden] {
+  display: none;
+}
+
+.onboarding__card {
+  pointer-events: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.25);
+  padding: 1.5rem 1.75rem;
+  max-width: 340px;
+  text-align: center;
+}
+
+.onboarding__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.onboarding__subtitle {
+  margin: 0 0 1.1rem;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #475569;
+}
+
+.btn--large {
+  padding: 0.65rem 1.2rem;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.onboarding__features {
+  list-style: none;
+  margin: 1.1rem 0 0.9rem;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.onboarding__features li {
+  padding-left: 0.9rem;
+  position: relative;
+}
+
+.onboarding__features li::before {
+  content: "\2013";
+  position: absolute;
+  left: 0;
+  color: #94a3b8;
+}
+
+.onboarding__note {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
 /* Marcador de foto: punto + flecha de azimut opcional.
    No se declara position aquí: Leaflet ya pone position:absolute vía su clase
    .leaflet-marker-icon (imprescindible para su transform:translate3d). Sobreescribirla
@@ -296,7 +371,21 @@ body {
   <span id="status" class="status">Selecciona una carpeta con fotos para empezar.</span>
 </header>
 
-<main id="map"></main>
+<main id="map">
+  <div id="onboarding" class="onboarding">
+    <div class="onboarding__card">
+      <h2 class="onboarding__title">GeoRefotos</h2>
+      <p class="onboarding__subtitle">Revisa y corrige fotografías georreferenciadas directamente sobre el mapa.</p>
+      <button id="onboarding-select-btn" class="btn btn--large" type="button">Seleccionar carpeta de fotos</button>
+      <ul class="onboarding__features">
+        <li>Corrige ubicación y orientación</li>
+        <li>Las fotografías se procesan localmente y no se suben a ningún servidor</li>
+        <li>Los originales nunca se modifican</li>
+      </ul>
+      <p class="onboarding__note">Chrome / Edge recomendados</p>
+    </div>
+  </div>
+</main>
 
 <div id="lightbox" class="lightbox" hidden>
   <button id="lightbox-close" class="lightbox__close" aria-label="Cerrar" type="button">&times;</button>
@@ -489,6 +578,8 @@ const saveChangesBtn = document.getElementById('save-changes-btn');
 const markerScaleInput = document.getElementById('marker-scale');
 const markerScaleLabel = document.getElementById('marker-scale-label');
 const statusEl = document.getElementById('status');
+const onboardingEl = document.getElementById('onboarding');
+const onboardingSelectBtn = document.getElementById('onboarding-select-btn');
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const lightboxClose = document.getElementById('lightbox-close');
@@ -566,7 +657,12 @@ function isInsideEditedFolder(relativePath) {
   return relativePath.split('/').slice(0, -1).includes(EDITED_FOLDER_NAME);
 }
 
+function hideOnboarding() {
+  onboardingEl.hidden = true;
+}
+
 selectFolderBtn.addEventListener('click', selectFolder);
+onboardingSelectBtn.addEventListener('click', selectFolder);
 folderInput.addEventListener('change', (event) => {
   hasWriteAccess = false;
   currentRootName = '';
@@ -576,6 +672,7 @@ folderInput.addEventListener('change', (event) => {
     .filter(isImageFile)
     .filter((file) => !isInsideEditedFolder(file.webkitRelativePath || file.name))
     .map((file) => ({ file, handle: null, dirHandle: null, relativePath: file.webkitRelativePath || file.name }));
+  if (items.length > 0) hideOnboarding();
   handleFileList(items);
   folderInput.value = '';
 });
@@ -617,6 +714,7 @@ async function selectFolder() {
     if (hasPendingChanges() && !confirm('Hay correcciones de ubicación sin guardar que se perderán. ¿Continuar?')) {
       return;
     }
+    hideOnboarding();
     hasWriteAccess = true;
     currentRootName = dirHandle.name;
     rootDirHandle = dirHandle;
