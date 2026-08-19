@@ -1,0 +1,126 @@
+{
+  "generated": "2026-08-19",
+  "source": "sample.zip (fotos personales del autor, no incluidas en el repositorio)",
+  "notes": "Todas las fotos traían GPS pero sin GPSImgDirection; el azimut de referencia de cada foto es sintético. 'embedded_in_jpg' son los valores realmente escritos en el EXIF del JPEG de demo (los que lee la app); 'reference' son los valores correctos. Solo una foto tiene error de posición y solo otra tiene error de azimut; el resto coincide con su referencia.",
+  "photos": [
+    {
+      "file": "demo_01.jpg",
+      "reference": {
+        "lat": 41.422131,
+        "lon": 2.118842,
+        "azimuth_deg": 15
+      },
+      "embedded_in_jpg": {
+        "lat": 41.422131,
+        "lon": 2.118842,
+        "azimuth_deg": 15
+      },
+      "error": null
+    },
+    {
+      "file": "demo_02.jpg",
+      "reference": {
+        "lat": 41.447018,
+        "lon": 2.171686,
+        "azimuth_deg": 95
+      },
+      "embedded_in_jpg": {
+        "lat": 41.447018,
+        "lon": 2.171686,
+        "azimuth_deg": 95
+      },
+      "error": null
+    },
+    {
+      "file": "demo_03.jpg",
+      "reference": {
+        "lat": 41.391625,
+        "lon": 2.180279,
+        "azimuth_deg": 250
+      },
+      "embedded_in_jpg": {
+        "lat": 41.391724,
+        "lon": 2.180639,
+        "azimuth_deg": 250
+      },
+      "error": {
+        "type": "location",
+        "distance_m": 32.0,
+        "bearing_deg": 70.0
+      }
+    },
+    {
+      "file": "demo_04.jpg",
+      "reference": {
+        "lat": 41.403139,
+        "lon": 2.172654,
+        "azimuth_deg": 340
+      },
+      "embedded_in_jpg": {
+        "lat": 41.403139,
+        "lon": 2.172654,
+        "azimuth_deg": 340
+      },
+      "error": null
+    },
+    {
+      "file": "demo_05.jpg",
+      "reference": {
+        "lat": 41.388868,
+        "lon": 2.194754,
+        "azimuth_deg": 60
+      },
+      "embedded_in_jpg": {
+        "lat": 41.388868,
+        "lon": 2.194754,
+        "azimuth_deg": 60
+      },
+      "error": null
+    },
+    {
+      "file": "demo_06.jpg",
+      "reference": {
+        "lat": 41.389806,
+        "lon": 2.195692,
+        "azimuth_deg": 190
+      },
+      "embedded_in_jpg": {
+        "lat": 41.389806,
+        "lon": 2.195692,
+        "azimuth_deg": 190
+      },
+      "error": null
+    },
+    {
+      "file": "demo_07.jpg",
+      "reference": {
+        "lat": 41.38604,
+        "lon": 2.183615,
+        "azimuth_deg": 120
+      },
+      "embedded_in_jpg": {
+        "lat": 41.38604,
+        "lon": 2.183615,
+        "azimuth_deg": 232.0
+      },
+      "error": {
+        "type": "azimuth",
+        "delta_deg": 112.0
+      }
+    },
+    {
+      "file": "demo_08.jpg",
+      "reference": {
+        "lat": 41.388351,
+        "lon": 2.159695,
+        "azimuth_deg": 300
+      },
+      "embedded_in_jpg": {
+        "lat": 41.388351,
+        "lon": 2.159695,
+        "azimuth_deg": 300
+      },
+      "error": null
+    }
+  ]
+}
